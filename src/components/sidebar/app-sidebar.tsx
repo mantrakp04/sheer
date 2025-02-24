@@ -23,7 +23,8 @@ export function AppSidebar() {
   const location = useLocation();
   const navigate = useNavigate();
   const chats = useLiveQuery(async () => {
-    return await new ChatHistoryDB().sessions.toArray();
+    const sessions = await new ChatHistoryDB().sessions.toArray();
+    return sessions.sort((a, b) => b.updatedAt - a.updatedAt);
   });
   const [hoveringId, setHoveringId] = useState<string | null>(null);
 
@@ -82,10 +83,11 @@ export function AppSidebar() {
                               ? 'translate-x-0' 
                               : 'translate-x-[200%]'
                           }`}
-                          onClick={() => {
+                          onClick={(e) => {
+                            e.preventDefault();
                             new ChatHistoryDB().sessions.delete(chat.id);
                             toast.success("Chat deleted");
-                            return navigate("/chat/new", { replace: true });
+                            return navigate("/chat/new");
                           }}
                         >
                           <Trash2 className="h-4 w-4" />

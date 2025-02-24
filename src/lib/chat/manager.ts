@@ -364,7 +364,7 @@ export class ChatManager {
           yield { type: "stream", content: chunk };
         }
       } else if (event.event === "on_chat_model_end") {
-        yield { type: "end", content: currentResponse };
+        yield { type: "end", content: currentResponse, usageMetadata: event.data?.output?.usage_metadata };
       } else if (event.event === "on_tool_start") {
         yield { type: "tool_start", name: event.name, input: event.data?.input };
       } else if (event.event === "on_tool_end") {
@@ -384,5 +384,17 @@ export class ChatManager {
         yield { type: "tool_end", name: event.name, output: event.data?.output };
       }
     }
+  }
+
+  async chatChain(
+    input: string | HumanMessage,
+    systemPrompt?: string,
+  ) {
+    const model = await this.getChatModel(this.config.default_chat_model);
+    const humanMessage = typeof input === "string" ? new HumanMessage(input) : input;
+    return await model.invoke([
+      { type: "system", content: systemPrompt || "You are a helpful assistant" },
+      humanMessage
+    ]);
   }
 }
