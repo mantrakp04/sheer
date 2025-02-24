@@ -28,7 +28,7 @@
     --accent: 240 4.8% 95.9%;
     --accent-foreground: 240 5.9% 10%;
 
-    --destructive: 0 84.2% 60.2%;
+    --destructive: 340 84.2% 60.2%; /* Adjusted to be more pinkish */
     --destructive-foreground: 0 0% 98%;
 
     --ring: 240 10% 3.9%;
@@ -44,37 +44,53 @@
     --chart-4: 43 74% 66%;
 
     --chart-5: 27 87% 67%;
+
+    --sidebar-background: 0 0% 98%;
+
+    --sidebar-foreground: 240 5.3% 26.1%;
+
+    --sidebar-primary: 240 5.9% 10%;
+
+    --sidebar-primary-foreground: 0 0% 98%;
+
+    --sidebar-accent: 240 4.8% 95.9%;
+
+    --sidebar-accent-foreground: 240 5.9% 10%;
+
+    --sidebar-border: 220 13% 91%;
+
+    --sidebar-ring: 217.2 91.2% 59.8%;
   }
 
   .dark {
-    --background: 240 10% 3.9%;
-    --foreground: 0 0% 98%;
+    --background: 180 2% 10%;
+    --foreground: 200, 3%, 83%;
 
-    --muted: 240 3.7% 15.9%;
-    --muted-foreground: 240 5% 64.9%;
+    --muted: 180 3.7% 15.9%;
+    --muted-foreground: 180 5% 64.9%;
 
-    --popover: 240 10% 3.9%;
+    --popover: 180 2% 10%;
     --popover-foreground: 0 0% 98%;
 
-    --card: 240 10% 3.9%;
+    --card: 180 2% 10%;
     --card-foreground: 0 0% 98%;
 
-    --border: 240 3.7% 15.9%;
-    --input: 240 3.7% 15.9%;
+    --border: 180 3.7% 15.9%;
+    --input: 180 3.7% 15.9%;
 
-    --primary: 0 0% 98%;
-    --primary-foreground: 240 5.9% 10%;
+    --primary: 333 61% 40%;
+    --primary-foreground: 0 0% 98%;
 
-    --secondary: 240 3.7% 15.9%;
+    --secondary: 333 3.7% 15.9%;
     --secondary-foreground: 0 0% 98%;
 
-    --accent: 240 3.7% 15.9%;
+    --accent: 333 3.7% 15.9%;
     --accent-foreground: 0 0% 98%;
 
-    --destructive: 0 62.8% 30.6%;
+    --destructive: 340 62.8% 30.6%; /* Adjusted to be more pinkish */
     --destructive-foreground: 0 0% 98%;
 
-    --ring: 240 4.9% 83.9%;
+    --ring: 333 61% 40%;
 
     --chart-1: 220 70% 50%;
 
@@ -85,6 +101,22 @@
     --chart-4: 280 65% 60%;
 
     --chart-5: 340 75% 55%;
+
+    --sidebar-background: 180 2% 10%;
+
+    --sidebar-foreground: 180 4.8% 95.9%;
+
+    --sidebar-primary: 333 61% 40%;
+
+    --sidebar-primary-foreground: 0 0% 100%;
+
+    --sidebar-accent: 180 3.7% 15.9%;
+
+    --sidebar-accent-foreground: 180 4.8% 95.9%;
+
+    --sidebar-border: 180 3.7% 15.9%;
+
+    --sidebar-ring: 217.2 91.2% 59.8%;
   }
 }
 
@@ -95,4 +127,29 @@
   body {
     @apply bg-background text-foreground;
   }
+    /* Customize scrollbar for Chrome, Edge, and Safari */
+  ::-webkit-scrollbar {
+    width: 8px; /* Width of the scrollbar */
+    height: 8px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: hsl(var(--muted)); /* Color of the track */
+        border-radius: var(--radius);
+
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: hsl(var(--muted-foreground)); /* Color of the scroll thumb */
+    border-radius: var(--radius); /* Rounded corners */
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--primary)); /* Color of the scroll thumb on hover */
+  }
+      /* Customize scrollbar for Firefox */
+    * {
+      scrollbar-width: thin;
+      scrollbar-color: hsl(var(--muted-foreground)) hsl(var(--muted));
+    }
 }

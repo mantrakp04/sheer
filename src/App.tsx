@@ -1,26 +1,41 @@
-import CountBtn from "@/components/count-btn";
-import ReactSVG from "@/assets/react.svg";
-import { Badge } from "@/components/ui/badge";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { routes } from "@/routes";
+import Layout from "@/layout";
+import { Toaster } from "sonner";
+import { ChatPage } from "./pages/chat/page";
 
 function App() {
+  const queryClient = new QueryClient();
+
   return (
-    <main className="flex flex-col items-center justify-center h-screen">
-      <div className="flex flex-col items-center gap-y-4">
-        <div className="inline-flex items-center gap-x-4">
-          <img src={ReactSVG} alt="React Logo" className="w-32" />
-          <span className="text-6xl">+</span>
-          <img src={"/vite.svg"} alt="Vite Logo" className="w-32" />
-        </div>
-        <a
-          href="https://ui.shadcn.com"
-          rel="noopener noreferrer nofollow"
-          target="_blank"
-        >
-          <Badge variant="outline">shadcn/ui</Badge>
-        </a>
-        <CountBtn />
-      </div>
-    </main>
+    <QueryClientProvider client={queryClient}>
+      <BrowserRouter>
+        <Routes>
+          {routes.map((route) => (
+            <Route
+              key={route.path}
+              path={route.path}
+              element={
+                <Layout>
+                  {route.component}
+                </Layout>
+              }
+            />
+          ))}
+          <Route
+            key="chat"
+            path="/chat/:id"
+            element={
+              <Layout>
+                <ChatPage />
+              </Layout>
+            }
+          />
+        </Routes>
+      </BrowserRouter>
+      <Toaster />
+    </QueryClientProvider>
   );
 }
 
