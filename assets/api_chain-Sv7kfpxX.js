@@ -1,4 +1,4 @@
-import{P as o,f as c}from"./index-B4aZITOS.js";import{LLMChain as r}from"./llm_chain-Bd419MdO.js";const p=`You are given the below API Documentation:
+import{P as o,f as c}from"./index-nY7fbjje.js";import{LLMChain as r}from"./llm_chain-BO5Gr40z.js";const p=`You are given the below API Documentation:
 {api_docs}
 Using this documentation, generate the full API url to call for answering the user question.
 You should build the API url in order to get a response that is as short as possible, while still getting the necessary information to answer the question. Pay attention to deliberately exclude any unnecessary pieces of data in the API call.
