@@ -13,4 +13,13 @@ export default defineConfig({
       "@": resolve(__dirname, "./src"),
     },
   },
+  server: {
+    proxy: {
+      'http://localhost:11434': {
+        target: 'http://localhost:11434',
+        changeOrigin: true,
+        secure: false,
+      }
+    }
+  }
 });
