@@ -39,6 +39,7 @@ export interface InputProps {
   handleAttachmentFileUpload: (event: React.ChangeEvent<HTMLInputElement>) => void;
   handleAttachmentUrlUpload: () => void;
   handleAttachmentRemove: (docId: string) => void;
+  stopGenerating: () => void;
 }
 
 export interface FilePreviewDialogProps {

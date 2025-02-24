@@ -25,6 +25,7 @@ export const Input = React.memo(({
   handleAttachmentRemove,
   selectedModelName,
   isGenerating,
+  stopGenerating,
 }: InputProps) => {
   return (
     <div className="flex flex-col w-1/2 mx-auto bg-muted rounded-md p-1">
@@ -34,6 +35,7 @@ export const Input = React.memo(({
           onPreview={setPreviewDocument}
           onRemove={handleAttachmentRemove}
           maxHeight="100px"
+          rowReverse={false}
         />
       )}
       <AutosizeTextarea
@@ -70,8 +72,14 @@ export const Input = React.memo(({
           variant="default" 
           size="icon" 
           className="rounded-full" 
-          onClick={onSendMessage}
-          disabled={isGenerating}
+          onClick={() => {
+            if (isGenerating) {
+              // stop the generation
+              stopGenerating();
+            } else {
+              onSendMessage();
+            }
+          }}
         >
           {isGenerating ? (
             <Loader2 className="h-4 w-4 animate-spin" />

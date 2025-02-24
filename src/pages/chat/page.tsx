@@ -174,6 +174,11 @@ export function ChatPage() {
     generateMessage(id, content, [], isGenerating, setIsGenerating, setStreamingHumanMessage, setStreamingAIMessageChunks, chatManager, setInput, setAttachments);
   }, [id, chatSession, isGenerating, chatHistoryDB.sessions, chatManager]);
 
+  const stopGenerating = React.useCallback(() => {
+    chatManager.controller.abort();
+    setIsGenerating(false);
+  }, [chatManager, setIsGenerating]);
+
   return (
     <div className="flex flex-col h-screen p-2">
       <Messages
@@ -205,6 +210,7 @@ export function ChatPage() {
         handleAttachmentRemove={handleAttachmentRemove}
         selectedModelName={selectedModelName}
         isGenerating={isGenerating}
+        stopGenerating={stopGenerating}
       />
       <FilePreviewDialog
         document={previewDocument}

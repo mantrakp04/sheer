@@ -99,7 +99,7 @@ export const Messages = React.memo(({
         <Button
           variant="secondary"
           size="icon"
-          className="absolute left-1/2 -translate-x-1/2 bottom-4 rounded-full shadow-md hover:bg-accent z-50 bg-background/80 backdrop-blur-sm"
+          className="absolute left-1/2 -translate-x-1/2 z-50 bottom-4 rounded-full shadow-md hover:bg-accent bg-background/80 backdrop-blur-sm"
           onClick={scrollToBottom}
         >
           <ArrowDown className="h-4 w-4" />

@@ -17,7 +17,7 @@ export class ChatHistoryDB extends Dexie {
   constructor() {
     super("chat_history");
     this.version(1).stores({
-      sessions: "++id, title, createdAt, updatedAt, model, embedding_model, enabled_tools, messages",
+      sessions: "id, title, createdAt, updatedAt, model, embedding_model, enabled_tools, messages",
     });
   }
 }

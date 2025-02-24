@@ -11,6 +11,7 @@ interface DocumentBadgesScrollAreaProps {
   removeable?: boolean;
   maxHeight?: string;
   className?: string;
+  rowReverse?: boolean;
 }
 
 export const DocumentBadgesScrollArea = React.memo(({ 
@@ -19,10 +20,11 @@ export const DocumentBadgesScrollArea = React.memo(({
   onRemove,
   removeable = true,
   maxHeight = "100px",
-  className = ""
+  className = "",
+  rowReverse = true,
 }: DocumentBadgesScrollAreaProps) => (
   <ScrollArea className={cn("w-full", className)} style={{ maxHeight }}>
-    <div className="flex flex-row-reverse flex-wrap-reverse gap-1 p-1">
+    <div className={`flex ${rowReverse ? "flex-row-reverse" : "flex-row"} flex-wrap-reverse gap-1 p-1`}>
       {documents.map((document) => (
         <DocumentBadge
           key={document.id}
