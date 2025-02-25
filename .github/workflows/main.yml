@@ -23,6 +23,4 @@ jobs:
         run: |
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           git config --global user.name "GitHub Actions"
-          git add README.md
-          git commit -m "Update README for Hugging Face Space"
           git push --force https://mantrakp:$HF_TOKEN@huggingface.co/spaces/mantrakp/sheer main:main
