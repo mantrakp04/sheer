@@ -9,11 +9,15 @@ import { HuggingFaceCallback } from "./pages/integrations/huggingface-callback";
 
 function App() {
   const queryClient = new QueryClient();
+  
+  // Get the base URL from Vite's import.meta.env
+  // This will be set based on the `base` option in vite.config.ts
+  const basename = import.meta.env.BASE_URL;
 
   return (
     <QueryClientProvider client={queryClient}>
       <LoadingProvider>
-        <BrowserRouter>
+        <BrowserRouter basename={basename}>
           <Routes>
             {routes.map((route) => (
               <Route
