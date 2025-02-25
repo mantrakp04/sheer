@@ -10,10 +10,10 @@ jobs:
   sync-to-hub:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout gh-pages branch
+      - name: Checkout main branch
         uses: actions/checkout@v3
         with:
-          ref: gh-pages
+          ref: main
           fetch-depth: 0
           lfs: true
       
@@ -57,7 +57,7 @@ jobs:
           
           ## Development
           
-          This Space is automatically updated via GitHub Actions from the repository. The gh-pages branch is directly pushed to this Space.
+          This Space is automatically updated via GitHub Actions from the repository. The main branch is directly pushed to this Space.
           
           ## License
           
@@ -72,4 +72,4 @@ jobs:
           git config --global user.name "GitHub Actions"
           git add README.md
           git commit -m "Update README for Hugging Face Space"
-          git push --force https://mantrakp:$HF_TOKEN@huggingface.co/spaces/mantrakp/sheer gh-pages:main
+          git push --force https://mantrakp:$HF_TOKEN@huggingface.co/spaces/mantrakp/sheer main:main
