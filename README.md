@@ -1,37 +1,43 @@
-# My Hugging Face Space
+---
+title: Sheer
+emoji: 👀
+colorFrom: indigo
+colorTo: purple
+sdk: docker
+pinned: true
+license: mit
+---
+
+# Sheer
 
 ## About
 
-This Space showcases [brief description of your application/project]. It demonstrates [key capabilities or technologies].
+This Space showcases a modern React application built with Bun and Vite. It demonstrates the power of modern web technologies combined with seamless deployment.
 
 ## Features
 
-- Feature 1: Description
-- Feature 2: Description
-- Feature 3: Description
+- Fast and responsive UI built with React and Tailwind CSS
+- Optimized build process using Bun and Vite
+- Modern development experience with TypeScript
+- Comprehensive UI component library
 
 ## How to Use
 
-1. [First step to use the application]
-2. [Second step to use the application]
-3. [Third step to use the application]
+Simply explore the application in this Space! The app is statically hosted and ready to use.
 
 ## Technologies Used
 
-- [Technology/Framework 1]
-- [Technology/Framework 2]
-- [Technology/Framework 3]
+- React 19
+- Bun
+- Vite
+- TypeScript
+- Tailwind CSS
+- Radix UI Components
 
 ## Development
 
-This Space is automatically updated via GitHub Actions from the [repository name] repository. Any changes pushed to the main branch are automatically deployed to this Space.
+This Space is automatically updated via GitHub Actions from the repository. The main branch is directly pushed to this Space.
 
 ## License
 
-[License information]
-
-## Contact
-
-[Contact information]
-
----
+See LICENSE file for details.
