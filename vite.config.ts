@@ -14,12 +14,9 @@ export default defineConfig({
     },
   },
   server: {
-    proxy: {
-      'http://localhost:11434': {
-        target: 'http://localhost:11434',
-        changeOrigin: true,
-        secure: false,
-      }
-    }
+    port: 7860
+  },
+  preview: {
+    port: 7860
   }
 });
