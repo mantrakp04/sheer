@@ -72,4 +72,4 @@ jobs:
           git config --global user.name "GitHub Actions"
           git add README.md
           git commit -m "Update README for Hugging Face Space"
-          git push https://mantrakp:$HF_TOKEN@huggingface.co/spaces/mantrakp/sheer main:main
+          git push https://mantrakp:$HF_TOKEN@huggingface.co/spaces/mantrakp/sheer gh-pages:main
