@@ -1,24 +1,48 @@
 name: Push to Hugging Face Space
 
 on:
-  push:
+  # Trigger after GitHub Pages deployment succeeds
+  workflow_run:
+    workflows: ["Deploy to GitHub Pages"]
+    types:
+      - completed
     branches:
-      - gh-pages  # Set to your default branch if different
+      - main
   workflow_dispatch:  # Allow manual triggering of the workflow
 
 jobs:
   push-to-huggingface:
     runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch' }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
+        uses: actions/checkout@v4
 
-      - name: Configure Git
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install
+
+      - name: Build project
+        run: bun run build
+
+      - name: Configure Git for Hugging Face
         run: |
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           git config --global user.name "GitHub Actions"
+
+      - name: Create temporary branch for HF deployment
+        run: |
+          # Create and switch to a new branch with just the dist contents
+          git checkout --orphan temp-branch
+          git rm -rf .
+          cp -r dist/* .
+          touch .nojekyll
+          git add .
+          git commit -m "Deploy to Hugging Face Space"
 
       - name: Push to Hugging Face Space
         env:
@@ -30,5 +54,5 @@ jobs:
           # Set URL with token for authentication
           git remote add space https://api-key:${HF_TOKEN}@huggingface.co/spaces/${HF_SPACE}
           
-          # Push to the gh-pages branch of the Space
-          git push --force space gh-pages:gh-pages
+          # Push to the main branch of the Space
+          git push --force space temp-branch:main
