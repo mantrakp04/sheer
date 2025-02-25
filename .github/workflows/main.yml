@@ -1,0 +1,85 @@
+name: Sync to Hugging Face hub
+
+on:
+  push:
+    branches: [main]
+  # to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+jobs:
+  build-and-sync-to-hub:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          lfs: true
+      
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: latest
+      
+      - name: Install dependencies
+        run: bun install
+      
+      - name: Build app
+        run: bun run build
+      
+      - name: Update README for Hugging Face Space
+        run: |
+          cat > README.md << 'EOL'
+          ---
+          title: Sheer
+          emoji: 🚀
+          colorFrom: indigo
+          colorTo: purple
+          sdk: static
+          pinned: true
+          ---
+          
+          # Sheer
+
+          ## About
+          
+          This Space showcases a modern React application built with Bun and Vite. It demonstrates the power of modern web technologies combined with seamless deployment.
+          
+          ## Features
+          
+          - Fast and responsive UI built with React and Tailwind CSS
+          - Optimized build process using Bun and Vite
+          - Modern development experience with TypeScript
+          - Comprehensive UI component library
+
+          ## How to Use
+          
+          Simply explore the application in this Space! The app is statically hosted and ready to use.
+          
+          ## Technologies Used
+          
+          - React 19
+          - Bun
+          - Vite
+          - TypeScript
+          - Tailwind CSS
+          - Radix UI Components
+          
+          ## Development
+          
+          This Space is automatically updated via GitHub Actions from the repository. Any changes pushed to the main branch are automatically built and deployed to this Space.
+          
+          ## License
+          
+          See LICENSE file for details.
+          EOL
+      
+      - name: Push to Hugging Face Hub
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: |
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git config --global user.name "GitHub Actions"
+          git add README.md dist/
+          git commit -m "Update build and README for Hugging Face Space"
+          git push https://mantrakp:$HF_TOKEN@huggingface.co/spaces/mantrakp/sheer main:main
