@@ -26,13 +26,17 @@ RUN mkdir -p /etc/apt/keyrings && \
 # Create and set working directory
 WORKDIR /app
 
-# Install Bun (following the official method)
-RUN curl -fsSL https://bun.sh/install | bash \
-    && chmod +x /root/.bun/bin/bun \
-    && ln -s /root/.bun/bin/bun /usr/local/bin/bun
+# Install Bun with more robust permission handling
+RUN curl -fsSL https://bun.sh/install | bash && \
+    # Make sure bun is executable
+    chmod 755 /root/.bun/bin/bun && \
+    # Create symlink in a standard PATH location
+    ln -sf /root/.bun/bin/bun /usr/local/bin/bun && \
+    # Verify bun works
+    bun --version
 
-# Add Bun to PATH
-ENV PATH="/root/.bun/bin:$PATH"
+# Add Bun to PATH explicitly (backup method)
+ENV PATH="/root/.bun/bin:/usr/local/bin:$PATH"
 
 # Copy package.json and package-lock.json
 COPY package.json ./
