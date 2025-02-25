@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
-    "preview": "vite preview",
+    "preview": "vite preview --host",
     "predeploy": "bun run build",
     "deploy": "bun run build && npx wrangler pages deploy dist"
   },

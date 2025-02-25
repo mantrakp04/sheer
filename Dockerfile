@@ -10,7 +10,18 @@ RUN apt-get update && apt-get install -y \
     git \
     build-essential \
     unzip \
+    ca-certificates \
+    gnupg \
     && rm -rf /var/lib/apt/lists/*
+
+# Install Node.js 18.x
+RUN mkdir -p /etc/apt/keyrings && \
+    curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg && \
+    echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_18.x nodistro main" | tee /etc/apt/sources.list.d/nodesource.list && \
+    apt-get update && \
+    apt-get install -y nodejs && \
+    rm -rf /var/lib/apt/lists/* && \
+    node -v && npm -v
 
 # Create and set working directory
 WORKDIR /app
@@ -40,4 +51,4 @@ RUN bun run build
 EXPOSE 7860
 
 # Command to run the application
-CMD ["bun", "run", "preview"]
+CMD bun run preview
