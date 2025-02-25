@@ -2,24 +2,15 @@
   "name": "react-vite-ui",
   "private": true,
   "homepage": "https://sheer-8kp.pages.dev/",
-  "deployments": [
-    "https://sheer-8kp.pages.dev/",
-    "https://mantrakp04.github.io/sheer",
-    "https://huggingface.co/spaces/mantrakp/sheer"
-  ],
   "version": "0.0.1",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
-    "build:github": "tsc -b && vite build --mode github",
     "lint": "eslint .",
     "preview": "vite preview",
     "predeploy": "bun run build",
-    "deploy:cloudflare": "bun run build && npx wrangler pages deploy dist",
-    "deploy:trigger-github": "gh workflow run deploy-github-pages.yml",
-    "deploy:trigger-huggingface": "gh workflow run push-to-huggingface.yml",
-    "deploy:all": "bun run deploy:cloudflare && bun run deploy:trigger-github && bun run deploy:trigger-huggingface"
+    "deploy": "bun run build && npx wrangler pages deploy dist"
   },
   "dependencies": {
     "@clerk/clerk-react": "^5.23.0",
