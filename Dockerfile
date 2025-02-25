@@ -1,58 +1,38 @@
-# Use the official Ubuntu base image
-FROM ubuntu:latest
+# use the official Bun image
+# see all versions at https://hub.docker.com/r/oven/bun/tags
+FROM oven/bun:1 AS base
+WORKDIR /usr/src/app
 
-# Set environment variables
-ENV DEBIAN_FRONTEND=noninteractive
+# install dependencies into temp directory
+# this will cache them and speed up future builds
+FROM base AS install
+RUN mkdir -p /temp/dev
+COPY package.json bun.lock /temp/dev/
+RUN cd /temp/dev && bun install --frozen-lockfile
 
-# Install necessary packages
-RUN apt-get update && apt-get install -y \
-    curl \
-    git \
-    build-essential \
-    unzip \
-    ca-certificates \
-    gnupg \
-    && rm -rf /var/lib/apt/lists/*
+# install with --production (exclude devDependencies)
+RUN mkdir -p /temp/prod
+COPY package.json bun.lock /temp/prod/
+RUN cd /temp/prod && bun install --frozen-lockfile --production
 
-# Install Node.js 18.x
-RUN mkdir -p /etc/apt/keyrings && \
-    curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg && \
-    echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_18.x nodistro main" | tee /etc/apt/sources.list.d/nodesource.list && \
-    apt-get update && \
-    apt-get install -y nodejs && \
-    rm -rf /var/lib/apt/lists/* && \
-    node -v && npm -v
-
-# Create and set working directory
-WORKDIR /app
-
-# Install Bun with more robust permission handling
-RUN curl -fsSL https://bun.sh/install | bash && \
-    # Make sure bun is executable
-    chmod 755 /root/.bun/bin/bun && \
-    # Create symlink in a standard PATH location
-    ln -sf /root/.bun/bin/bun /usr/local/bin/bun && \
-    # Verify bun works
-    bun --version
-
-# Add Bun to PATH explicitly (backup method)
-ENV PATH="/root/.bun/bin:/usr/local/bin:$PATH"
-
-# Copy package.json and package-lock.json
-COPY package.json ./
-COPY bun.lock ./
-
-# Install dependencies
-RUN bun install
-
-# Copy the rest of the application code
+# copy node_modules from temp directory
+# then copy all (non-ignored) project files into the image
+FROM base AS prerelease
+COPY --from=install /temp/dev/node_modules node_modules
 COPY . .
 
-# Build the application
+# [optional] tests & build
+ENV NODE_ENV=production
+RUN bun test
 RUN bun run build
 
-# Expose the port the app runs on
-EXPOSE 7860
+# copy production dependencies and source code into final image
+FROM base AS release
+COPY --from=install /temp/prod/node_modules node_modules
+COPY --from=prerelease /usr/src/app/index.ts .
+COPY --from=prerelease /usr/src/app/package.json .
 
-# Command to run the application
+# run the app
+USER bun
+EXPOSE 7860
 CMD bun run preview
