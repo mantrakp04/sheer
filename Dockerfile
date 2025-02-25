@@ -1,15 +1,26 @@
-# Stage 1: Build the React/Vite application with Bun
-FROM oven/bun:1 AS builder
+# use the official Bun image
+FROM oven/bun:1
 WORKDIR /app
 
-# Install dependencies into temp directory
-# This will cache them and speed up future builds
+# Copy package files
 COPY package.json bun.lock ./
-RUN bun install
 
-# Copy all project files and build the application
+# Install ALL dependencies (including dev dependencies)
+RUN bun install --frozen-lockfile --non-interactive
+
+# Copy all project files
 COPY . .
+
+# Set production environment and build
 ENV NODE_ENV=production
 RUN bun run build
 
-CMD ["bun", "run", "preview"]
+# Move Vite from devDependencies to dependencies for the preview server
+# This ensures Vite is available at runtime in production environments
+RUN bun add vite @vitejs/plugin-react
+
+# Expose the port that the app will run on
+EXPOSE 7860
+
+# Use the preview command directly with Bun to avoid any script-related issues
+CMD ["bun", "run", "--bun", "vite", "preview", "--host", "--port", "7860"]
