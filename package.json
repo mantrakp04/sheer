@@ -1,7 +1,6 @@
 {
   "name": "react-vite-ui",
   "private": true,
-  "homepage": "https://sheer-8kp.pages.dev/",
   "version": "0.0.1",
   "type": "module",
   "scripts": {
