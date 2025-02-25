@@ -23,10 +23,17 @@ export const Messages = React.memo(({
   const { id } = useParams();
   const viewportRef = React.useRef<HTMLDivElement>(null);
   const [showScrollToBottom, setShowScrollToBottom] = React.useState(false);
+  const initialLoadRef = React.useRef(true);
   
   const handleScroll = React.useCallback((event: Event) => {
     const viewport = event.target as HTMLDivElement;
     const isNotAtBottom = viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight > 10;
+    console.log('Scroll position:', {
+      scrollHeight: viewport.scrollHeight,
+      scrollTop: viewport.scrollTop,
+      clientHeight: viewport.clientHeight,
+      isNotAtBottom
+    });
     setShowScrollToBottom(isNotAtBottom);
   }, []);
 
@@ -39,6 +46,7 @@ export const Messages = React.memo(({
     });
   }, []);
 
+  // Effect for handling scroll events
   React.useEffect(() => {
     const viewport = viewportRef.current;
     if (!viewport) return;
@@ -46,8 +54,76 @@ export const Messages = React.memo(({
     viewport.addEventListener('scroll', handleScroll);
     // Initial check for scroll position
     handleScroll({ target: viewport } as unknown as Event);
-    return () => viewport.removeEventListener('scroll', handleScroll);
-  }, [handleScroll]);
+    
+    // Check scroll position after a short delay to account for content rendering
+    const checkTimeout = setTimeout(() => {
+      handleScroll({ target: viewport } as unknown as Event);
+    }, 100);
+
+    return () => {
+      viewport.removeEventListener('scroll', handleScroll);
+      clearTimeout(checkTimeout);
+    };
+  }, [handleScroll, messages, streamingAIMessageChunks]);
+  
+  // Effect for initial scroll to bottom on page load
+  React.useEffect(() => {
+    if (initialLoadRef.current && messages && messages.length > 0 && viewportRef.current) {
+      // Use a timeout to ensure content is rendered before scrolling
+      const initialScrollTimeout = setTimeout(() => {
+        if (viewportRef.current) {
+          viewportRef.current.scrollTo({
+            top: viewportRef.current.scrollHeight,
+            behavior: 'smooth'
+          });
+          initialLoadRef.current = false;
+        }
+      }, 100);
+      
+      return () => clearTimeout(initialScrollTimeout);
+    }
+  }, [messages]);
+  
+  // Reset initialLoadRef when chat ID changes
+  React.useEffect(() => {
+    // Reset the initial load flag when the chat ID changes
+    initialLoadRef.current = true;
+    
+    // Attempt to scroll to bottom after a short delay
+    if (id && id !== "new") {
+      const resetScrollTimeout = setTimeout(() => {
+        if (viewportRef.current && messages && messages.length > 0) {
+          viewportRef.current.scrollTo({
+            top: viewportRef.current.scrollHeight,
+            behavior: 'smooth'
+          });
+        }
+      }, 200);
+      
+      return () => clearTimeout(resetScrollTimeout);
+    }
+  }, [id]);
+  
+  // Scroll to bottom when streaming messages change
+  React.useEffect(() => {
+    // Only auto-scroll if we're already near the bottom or if this is the first message chunk
+    if (viewportRef.current && streamingAIMessageChunks.length > 0) {
+      const viewport = viewportRef.current;
+      const isNearBottom = viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight < 100;
+      
+      if (isNearBottom || streamingAIMessageChunks.length === 1) {
+        // Use requestAnimationFrame to ensure smooth scrolling during streaming
+        requestAnimationFrame(() => {
+          if (viewportRef.current) {
+            viewportRef.current.scrollTo({
+              top: viewportRef.current.scrollHeight,
+              behavior: streamingAIMessageChunks.length === 1 ? 'smooth' : 'auto'
+            });
+          }
+        });
+      }
+    }
+  }, [streamingAIMessageChunks]);
   
   if (id === "new" || !messages) {
     return <div className="flex-1 min-h-0"><ScrollArea className="h-full" /></div>;
@@ -99,7 +175,7 @@ export const Messages = React.memo(({
         <Button
           variant="secondary"
           size="icon"
-          className="absolute left-1/2 -translate-x-1/2 z-50 bottom-4 rounded-full shadow-md hover:bg-accent bg-background/80 backdrop-blur-sm"
+          className="absolute z-50 bottom-4 left-1/2 -translate-x-1/2 rounded-full shadow-md hover:bg-accent bg-background/80 backdrop-blur-sm"
           onClick={scrollToBottom}
         >
           <ArrowDown className="h-4 w-4" />

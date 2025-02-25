@@ -57,7 +57,7 @@ export class DexieChatMemory extends BaseChatMessageHistory {
       const chatModel = CHAT_MODELS.find((m) => m.model === this.config.default_chat_model);
       const embeddingModel = EMBEDDING_MODELS.find((m) => m.model === this.config.default_embedding_model);
       
-      if (!chatModel || !embeddingModel) {
+      if (!chatModel) {
         throw new Error("Chat or embedding models are not configured.");
       }
 
@@ -67,7 +67,7 @@ export class DexieChatMemory extends BaseChatMessageHistory {
         createdAt: Date.now(),
         updatedAt: Date.now(),
         model: chatModel.model,
-        embedding_model: embeddingModel.model,
+        embedding_model: embeddingModel?.model || '',
         enabled_tools: [],
         messages: [],
       };

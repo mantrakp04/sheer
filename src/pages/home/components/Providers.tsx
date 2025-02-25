@@ -24,9 +24,9 @@ export const Providers = ({ config }: ProvidersProps) => {
 
   const handleHuggingFaceOAuth = () => {
     const clientId = import.meta.env.VITE_HF_CLIENT_ID;
-    const redirectUri = import.meta.env.VITE_HF_REDIRECT_URI;
+    const redirectUri = window.location.origin + '/integrations/huggingface-callback';
     
-    if (!clientId || !redirectUri) {
+    if (!clientId) {
       toast.error("HuggingFace OAuth configuration is missing");
       return;
     }
