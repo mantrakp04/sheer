@@ -1,4 +1,5 @@
 import { StoredMessage } from "@langchain/core/messages";
+import { ChatCompletionReasoningEffort } from "openai/resources/chat/completions";
 
 export interface IChatSession {
   id: string;
@@ -9,7 +10,7 @@ export interface IChatSession {
   model: string;
   embedding_model: string;
   enabled_tools: string[];
-  python_session_id?: string;
+  reasoningEffort?: ChatCompletionReasoningEffort | null | undefined;
 }
 
 export type ToolType = 

@@ -6,6 +6,9 @@ import { InputProps } from "../types";
 import { ModelSelector } from "./ModelSelector";
 import { AttachmentDropdown } from "./AttachmentDropdown";
 import { DocumentBadgesScrollArea } from "./DocumentBadgesScrollArea";
+import { ReasoningEffortSelector } from "./ReasoningEffortSelector";
+import { PROVIDERS } from "@/lib/config/types";
+import { ChatCompletionReasoningEffort } from "openai/resources/chat/completions";
 
 export const Input = React.memo(({
   input,
@@ -26,6 +29,10 @@ export const Input = React.memo(({
   selectedModelName,
   isGenerating,
   stopGenerating,
+  selectedModelProvider,
+  isModelReasoning,
+  reasoningEffort,
+  onReasoningEffortChange,
 }: InputProps) => {
   return (
     <div className="flex flex-col w-1/2 mx-auto bg-muted rounded-md p-1">
@@ -59,6 +66,14 @@ export const Input = React.memo(({
             enabledChatModels={enabledChatModels}
             onModelChange={onModelChange}
           />
+          {isModelReasoning && selectedModelProvider && onReasoningEffortChange && (
+            <ReasoningEffortSelector
+              selectedReasoningEffort={reasoningEffort as ChatCompletionReasoningEffort}
+              provider={selectedModelProvider as PROVIDERS}
+              isReasoning={isModelReasoning}
+              onReasoningEffortChange={onReasoningEffortChange as (effort: ChatCompletionReasoningEffort) => void}
+            />
+          )}
           <AttachmentDropdown
             isUrlInputOpen={isUrlInputOpen}
             setIsUrlInputOpen={setIsUrlInputOpen}

@@ -119,6 +119,15 @@ export const BASE_CHAT_MODELS: ChatModel[] = [
     isReasoning: false,
   },
   {
+    name: 'Claude 3.7 Sonnet',
+    provider: PROVIDERS.anthropic,
+    model: 'claude-3-7-sonnet-20250219',
+    description: 'Anthropic Claude 3.7 Sonnet',
+    modalities: [MODALITIES.image, MODALITIES.pdf],
+    isReasoning: true,
+    reasoningArgs: ['disabled', 'low', 'medium', 'high'],
+  },
+  {
     name: 'Gemini 2.0 Flash',
     provider: PROVIDERS.gemini,
     model: 'gemini-2.0-flash',

@@ -30,8 +30,12 @@ export interface InputProps {
   urlInput: string;
   selectedModelName: string;
   isGenerating: boolean;
+  selectedModelProvider?: string;
+  isModelReasoning?: boolean;
+  reasoningEffort?: string | null;
   onInputChange: (value: string) => void;
   onModelChange: (model: string) => void;
+  onReasoningEffortChange?: (effort: string) => void;
   onSendMessage: () => void;
   setPreviewDocument: (doc: IDocument | null) => void;
   setIsUrlInputOpen: (open: boolean) => void;

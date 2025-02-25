@@ -10,6 +10,8 @@ import {
   HumanMessage,
 } from "@langchain/core/messages";
 import { IConfig, CHAT_MODELS, EMBEDDING_MODELS } from "@/lib/config/types";
+import { ChatCompletionReasoningEffort } from "openai/resources/chat/completions";
+import { PROVIDERS } from "@/lib/config/types";
 
 // Create a singleton instance of ChatHistoryDB
 export class ChatHistoryDB extends Dexie {
@@ -19,7 +21,7 @@ export class ChatHistoryDB extends Dexie {
   private constructor() {
     super("chat_history");
     this.version(1).stores({
-      sessions: "id, title, createdAt, updatedAt, model, embedding_model, enabled_tools, messages",
+      sessions: "id, title, createdAt, updatedAt, model, embedding_model, enabled_tools, messages, reasoningEffort",
     });
   }
 
@@ -70,6 +72,11 @@ export class DexieChatMemory extends BaseChatMessageHistory {
         embedding_model: embeddingModel?.model || '',
         enabled_tools: [],
         messages: [],
+        reasoningEffort: chatModel.isReasoning 
+          ? (chatModel.provider === PROVIDERS.anthropic 
+              ? "disabled" as ChatCompletionReasoningEffort 
+              : "low" as ChatCompletionReasoningEffort)
+          : null as ChatCompletionReasoningEffort,
       };
 
       await this.db.sessions.put(this.chatHistory);

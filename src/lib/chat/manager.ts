@@ -18,6 +18,7 @@ import { Document } from "@langchain/core/documents";
 import { HumanMessage, ToolMessage } from "@langchain/core/messages";
 import { IChatSession } from "./types";
 import { ChatHFInference } from "./chat-hf";
+import { ChatCompletionReasoningEffort } from "openai/resources/chat/completions";
 
 // Define an error interface for better type safety
 interface ErrorWithMessage {
@@ -79,7 +80,7 @@ export class ChatManager {
     this.controller = new AbortController();
   }
 
-  private async getChatModel(modelName: string): Promise<BaseChatModel> {
+  private async getChatModel(modelName: string, reasoningEffort?: ChatCompletionReasoningEffort): Promise<BaseChatModel> {
     // Ensure config is loaded
     if (!this.config) {
       await this.initializeConfig();
@@ -103,16 +104,29 @@ export class ChatManager {
           return new ChatOpenAI({
             modelName: this.config.openai_model && this.config.openai_model.trim() !== '' ? this.config.openai_model : model.model,
             apiKey: this.config.openai_api_key,
+            reasoningEffort: model.isReasoning ? reasoningEffort : undefined,
+            maxCompletionTokens: -1,
             configuration: {
               baseURL: this.config.openai_base_url && this.config.openai_base_url.trim() !== '' ? this.config.openai_base_url : undefined,
             }
           });
 
-        case PROVIDERS.anthropic:
+        case PROVIDERS.anthropic: {
+          const isThinkingDisabled = !reasoningEffort || String(reasoningEffort) === "disabled";
+          
           return new ChatAnthropic({
             modelName: model.model,
             apiKey: this.config.anthropic_api_key,
+            maxTokens: 64000,
+            thinking: model.isReasoning && !isThinkingDisabled ? {
+              type: "enabled",
+              budget_tokens:
+                reasoningEffort === "high" ? 32000 :
+                reasoningEffort === "medium" ? 16000 :
+                8000 // low
+            } : undefined // disabled
           });
+        }
 
         case PROVIDERS.gemini:
           return new ChatGoogleGenerativeAI({
@@ -430,8 +444,15 @@ export class ChatManager {
     
     const chatSession = await memory.db.table("sessions").get(sessionId);
     
-    this.model = await this.getChatModel(chatSession?.model || this.config.default_chat_model);
-    this.embeddings = await this.getEmbeddingModel(chatSession?.embedding_model || this.config.default_embedding_model || null);
+    this.model = await this.getChatModel(
+      chatSession?.model || this.config.default_chat_model,
+      chatSession?.reasoningEffort as ChatCompletionReasoningEffort
+    );
+    try {
+      this.embeddings = await this.getEmbeddingModel(chatSession?.embedding_model || this.config.default_embedding_model || null);
+    } catch (error) {
+      console.log(error)
+    }
 
     const agent = await this.getAgent(chatSession?.enabled_tools || []);
 
@@ -455,11 +476,13 @@ export class ChatManager {
     for await (const event of eventStream) {
       if (event.event === "on_chat_model_stream") {
         const chunk = event.data?.chunk;
+        console.log(chunk)
         if (chunk) {
           currentResponse += chunk;
           yield { type: "stream", content: chunk };
         }
       } else if (event.event === "on_chat_model_end") {
+        console.log(event)
         yield { type: "end", content: currentResponse, usageMetadata: event.data?.output?.usage_metadata };
       } else if (event.event === "on_tool_start") {
         yield { type: "tool_start", name: event.name, input: event.data?.input };
@@ -485,8 +508,9 @@ export class ChatManager {
   async chatChain(
     input: string | HumanMessage,
     systemPrompt?: string,
+    reasoningEffort?: ChatCompletionReasoningEffort,
   ) {
-    const model = await this.getChatModel(this.config.default_chat_model);
+    const model = await this.getChatModel(this.config.default_chat_model, reasoningEffort);
     const humanMessage = typeof input === "string" ? new HumanMessage(input) : input;
     return await model.invoke([
       { type: "system", content: systemPrompt || "You are a helpful assistant" },

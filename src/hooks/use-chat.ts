@@ -70,6 +70,7 @@ export const generateMessage = async (
     setStreamingHumanMessage(new HumanMessage(chatInput));
     setStreamingAIMessageChunks([]);
 
+    // Note: The ChatManager.chat method retrieves the reasoningEffort from the chat session in the database
     const messageIterator = chatManager.chat(chatId, chatInput, chatAttachments);
 
     for await (const event of messageIterator) {

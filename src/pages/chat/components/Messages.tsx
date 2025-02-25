@@ -28,12 +28,6 @@ export const Messages = React.memo(({
   const handleScroll = React.useCallback((event: Event) => {
     const viewport = event.target as HTMLDivElement;
     const isNotAtBottom = viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight > 10;
-    console.log('Scroll position:', {
-      scrollHeight: viewport.scrollHeight,
-      scrollTop: viewport.scrollTop,
-      clientHeight: viewport.clientHeight,
-      isNotAtBottom
-    });
     setShowScrollToBottom(isNotAtBottom);
   }, []);
 

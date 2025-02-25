@@ -16,6 +16,7 @@ import { DocumentManager } from "@/lib/document/manager";
 import { useLoading } from "@/contexts/loading-context";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
+import { ChatCompletionReasoningEffort } from "openai/resources/chat/completions";
 
 export function ChatPage() {
   const { id } = useParams();
@@ -60,6 +61,11 @@ export function ChatPage() {
     return model?.provider;
   }, [selectedModel]);
 
+  const isModelReasoning = React.useMemo(() => {
+    const model = CHAT_MODELS.find(model => model.model === selectedModel);
+    return model?.isReasoning || false;
+  }, [selectedModel]);
+
   const handleModelChange = React.useCallback(async (model: string) => {
     if (!config) return;
     
@@ -71,9 +77,23 @@ export function ChatPage() {
     } else {
       const session = await chatHistoryDB.sessions.get(id);
       if (session) {
+        // Get the new model details
+        const newModel = CHAT_MODELS.find(m => m.model === model);
+        
+        // Set default reasoning effort if the model supports it
+        let reasoningEffort = session.reasoningEffort;
+        if (newModel?.isReasoning && !reasoningEffort) {
+          reasoningEffort = newModel.provider === PROVIDERS.anthropic ? 
+            "disabled" as ChatCompletionReasoningEffort : 
+            "low" as ChatCompletionReasoningEffort;
+        } else if (!newModel?.isReasoning) {
+          reasoningEffort = null;
+        }
+        
         await chatHistoryDB.sessions.update(id, {
           ...session,
           model,
+          reasoningEffort,
           updatedAt: Date.now()
         });
       }
@@ -81,6 +101,21 @@ export function ChatPage() {
     setSelectedModel(model);
     setError(null); // Clear any previous errors when changing models
   }, [config, id, setSelectedModel, configManager, chatHistoryDB.sessions]);
+
+  const handleReasoningEffortChange = React.useCallback(async (effort: string) => {
+    if (!id || id === "new" || !chatSession) return;
+    
+    try {
+      await chatHistoryDB.sessions.update(id, {
+        ...chatSession,
+        reasoningEffort: effort as ChatCompletionReasoningEffort,
+        updatedAt: Date.now()
+      });
+    } catch (error) {
+      console.error("Error updating reasoning effort:", error);
+      toast.error("Failed to update reasoning effort");
+    }
+  }, [id, chatSession, chatHistoryDB.sessions]);
 
   const handleSendMessage = React.useCallback(async () => {
     // Clear any previous errors
@@ -127,7 +162,8 @@ export function ChatPage() {
       if (isNewChat && chatId) {
         const chatName = await chatManager.chatChain(
           `Based on this user message, generate a very concise (max 40 chars) but descriptive name for this chat: "${input}"`,
-          "You are a helpful assistant that generates concise chat names. Respond only with the name, no quotes or explanation."
+          "You are a helpful assistant that generates concise chat names. Respond only with the name, no quotes or explanation.",
+          chatSession?.reasoningEffort as ChatCompletionReasoningEffort
         );
         await chatHistoryDB.sessions.update(chatId, {
           name: String(chatName.content)
@@ -141,7 +177,7 @@ export function ChatPage() {
         setError("An unknown error occurred while sending your message");
       }
     }
-  }, [id, input, attachments, isGenerating, chatManager, navigate, chatHistoryDB.sessions, selectedModelProvider, config]);
+  }, [id, input, attachments, isGenerating, chatManager, navigate, chatHistoryDB.sessions, selectedModelProvider, config, chatSession]);
   
   const handleAttachmentFileUpload = React.useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
@@ -213,7 +249,7 @@ export function ChatPage() {
         }
       };
       // Remove messages after the edited message
-      const newMessages = updatedMessages.slice(0, editingMessageIndex + 1);
+      const newMessages = updatedMessages.slice(0, editingMessageIndex);
       
       await chatHistoryDB.sessions.update(id, {
         ...chatSession,
@@ -277,7 +313,7 @@ export function ChatPage() {
       const content = message.data.content;
 
       // Remove messages after the current message
-      const newMessages = messages.slice(0, index + 1);
+      const newMessages = messages.slice(0, index);
       
       await chatHistoryDB.sessions.update(id, {
         ...chatSession,
@@ -354,6 +390,10 @@ export function ChatPage() {
         selectedModelName={selectedModelName}
         isGenerating={isGenerating}
         stopGenerating={stopGenerating}
+        selectedModelProvider={selectedModelProvider}
+        isModelReasoning={isModelReasoning}
+        reasoningEffort={chatSession?.reasoningEffort}
+        onReasoningEffortChange={handleReasoningEffortChange}
       />
       <FilePreviewDialog
         document={previewDocument}
