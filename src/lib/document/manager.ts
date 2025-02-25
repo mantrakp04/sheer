@@ -20,6 +20,8 @@ export class DocumentManager extends Dexie {
   private static instance: DocumentManager;
   fs!: typeof import("fs");
   documents!: Table<IDocument>;
+  private initialized: boolean = false;
+  private initPromise: Promise<void> | null = null;
 
   public static getInstance(): DocumentManager {
     if (!DocumentManager.instance) {
@@ -33,9 +35,12 @@ export class DocumentManager extends Dexie {
     this.version(1).stores({
       documents: "id, name, path, type, createdAt",
     });
-    this.initialize();
+    this.initPromise = this.initialize();
   }
+  
   private async initialize() {
+    if (this.initialized) return;
+    
     await new Promise<void>((resolve) => {
       configure({ 
         fs: "IndexedDB",
@@ -45,6 +50,14 @@ export class DocumentManager extends Dexie {
         resolve();
       });
     });
+    
+    this.initialized = true;
+  }
+
+  private async ensureInitialized() {
+    if (!this.initialized) {
+      await this.initPromise;
+    }
   }
 
   getDocumentType(mimeType: string): DocumentType {
@@ -77,6 +90,8 @@ export class DocumentManager extends Dexie {
   }
 
   async uploadDocument(file: File) {
+    await this.ensureInitialized();
+    
     const fileId = crypto.randomUUID();
     const fileName = `${fileId}.${file.type.split("/")[1]}`;
     const filePath = `documents/${fileName}`;
@@ -115,6 +130,8 @@ export class DocumentManager extends Dexie {
   }
 
   async uploadUrl(url: string) {
+    await this.ensureInitialized();
+    
     const fileId = crypto.randomUUID();
     const createdAt = Date.now();
     let newDoc: IDocument;
@@ -140,6 +157,8 @@ export class DocumentManager extends Dexie {
   }
 
   async getDocument(id: string) {
+    await this.ensureInitialized();
+    
     const file = await this.documents.get(id);
     if (!file) {
       throw new Error("Document not found");
@@ -156,12 +175,13 @@ export class DocumentManager extends Dexie {
   }
 
   async loadDocument(id: string) {
+    await this.ensureInitialized();
+    
     const file = await this.documents.get(id);
     if (!file) {
       throw new Error("Document not found");
     }
     const type = file.type;
-    console.log(type)
     let loader: DocumentLoader;
     switch (type) {
       case "pdf":

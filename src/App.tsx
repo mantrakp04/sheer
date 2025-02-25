@@ -4,37 +4,45 @@ import { routes } from "@/routes";
 import Layout from "@/layout";
 import { Toaster } from "sonner";
 import { ChatPage } from "./pages/chat/page";
+import { LoadingProvider } from "@/contexts/loading-context";
+import { HuggingFaceCallback } from "./pages/integrations/huggingface-callback";
 
 function App() {
   const queryClient = new QueryClient();
 
   return (
     <QueryClientProvider client={queryClient}>
-      <BrowserRouter>
-        <Routes>
-          {routes.map((route) => (
+      <LoadingProvider>
+        <BrowserRouter>
+          <Routes>
+            {routes.map((route) => (
+              <Route
+                key={route.path}
+                path={route.path}
+                element={
+                  <Layout>
+                    {route.component}
+                  </Layout>
+                }
+              />
+            ))}
             <Route
-              key={route.path}
-              path={route.path}
+              key="chat"
+              path="/chat/:id"
               element={
                 <Layout>
-                  {route.component}
+                  <ChatPage />
                 </Layout>
               }
             />
-          ))}
-          <Route
-            key="chat"
-            path="/chat/:id"
-            element={
-              <Layout>
-                <ChatPage />
-              </Layout>
-            }
-          />
-        </Routes>
-      </BrowserRouter>
-      <Toaster />
+            <Route
+              path="/integrations/huggingface-callback"
+              element={<HuggingFaceCallback />}
+            />
+          </Routes>
+        </BrowserRouter>
+        <Toaster />
+      </LoadingProvider>
     </QueryClientProvider>
   );
 }

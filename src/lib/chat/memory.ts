@@ -11,14 +11,23 @@ import {
 } from "@langchain/core/messages";
 import { IConfig, CHAT_MODELS, EMBEDDING_MODELS } from "@/lib/config/types";
 
+// Create a singleton instance of ChatHistoryDB
 export class ChatHistoryDB extends Dexie {
   sessions!: Dexie.Table<IChatSession, string>;
+  private static instance: ChatHistoryDB | null = null;
 
-  constructor() {
+  private constructor() {
     super("chat_history");
     this.version(1).stores({
       sessions: "id, title, createdAt, updatedAt, model, embedding_model, enabled_tools, messages",
     });
+  }
+
+  public static getInstance(): ChatHistoryDB {
+    if (!ChatHistoryDB.instance) {
+      ChatHistoryDB.instance = new ChatHistoryDB();
+    }
+    return ChatHistoryDB.instance;
   }
 }
 
@@ -28,19 +37,19 @@ export class DexieChatMemory extends BaseChatMessageHistory {
   sessionId: string;
   chatHistory!: IChatSession | undefined;
   config!: IConfig;
-  configManager!: ConfigManager;
+  configManager: ConfigManager;
   initialized: boolean = false;
 
   constructor(sessionId: string) {
     super();
     this.sessionId = sessionId;
-    this.db = new ChatHistoryDB();
+    this.db = ChatHistoryDB.getInstance();
+    this.configManager = ConfigManager.getInstance();
   }
 
   async initialize() {
     if (this.initialized) return;
     
-    this.configManager = await ConfigManager.getInstance();
     this.config = await this.configManager.getConfig();
     this.chatHistory = await this.db.sessions.get(this.sessionId);
     
@@ -49,7 +58,7 @@ export class DexieChatMemory extends BaseChatMessageHistory {
       const embeddingModel = EMBEDDING_MODELS.find((m) => m.model === this.config.default_embedding_model);
       
       if (!chatModel || !embeddingModel) {
-        throw new Error("Default models not found in configuration");
+        throw new Error("Chat or embedding models are not configured.");
       }
 
       this.chatHistory = {

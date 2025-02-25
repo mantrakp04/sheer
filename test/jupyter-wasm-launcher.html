@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jupyter WASM Instance</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        button {
+            padding: 10px 15px;
+            font-size: 16px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        #status {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 4px;
+            background-color: #f8f9fa;
+        }
+        #jupyter-frame {
+            width: 100%;
+            height: 600px;
+            border: 1px solid #ddd;
+            margin-top: 20px;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <h1>Jupyter WASM Instance</h1>
+    <p>This page runs a Jupyter notebook server directly in your browser using WebAssembly.</p>
+    
+    <button id="start-button">Start Jupyter Server</button>
+    <div id="status">Status: Ready to launch</div>
+    <iframe id="jupyter-frame" sandbox="allow-scripts allow-same-origin"></iframe>
+
+    <script>
+        document.getElementById('start-button').addEventListener('click', async () => {
+            const statusEl = document.getElementById('status');
+            const frameEl = document.getElementById('jupyter-frame');
+            
+            statusEl.textContent = 'Status: Loading WASM module...';
+            
+            try {
+                // Import the WASM module
+                const wasmModule = await WebAssembly.instantiateStreaming(
+                    fetch('jupyter-datascience.wasm'),
+                    {}
+                );
+                
+                statusEl.textContent = 'Status: Starting Jupyter server...';
+                
+                // Initialize the WASM instance
+                const instance = wasmModule.instance;
+                await instance.exports._start();
+                
+                // Connect to the virtual server
+                const port = 8888; // The port defined in the Docker image
+                const url = `http://localhost:${port}`;
+                
+                statusEl.textContent = 'Status: Jupyter server running at ' + url;
+                
+                // Display in iframe
+                frameEl.style.display = 'block';
+                frameEl.src = url;
+            } catch (error) {
+                statusEl.textContent = 'Status: Error - ' + error.message;
+                console.error(error);
+            }
+        });
+    </script>
+</body>
+</html>

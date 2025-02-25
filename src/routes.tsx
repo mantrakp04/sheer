@@ -7,5 +7,5 @@ export const routes = [
     label: "Home",
     icon: <HomeIcon />,
     component: <HomePage />,
-  },
+  }
 ];

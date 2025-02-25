@@ -13,7 +13,9 @@
     "deploy": "bun run build && npx wrangler pages deploy dist"
   },
   "dependencies": {
+    "@clerk/clerk-react": "^5.23.0",
     "@hookform/resolvers": "^4.1.1",
+    "@huggingface/inference": "2",
     "@langchain/anthropic": "^0.3.13",
     "@langchain/community": "^0.3.32",
     "@langchain/core": "^0.3.40",

@@ -17,91 +17,179 @@ import { DocumentManager } from "@/lib/document/manager";
 import { Document } from "@langchain/core/documents";
 import { HumanMessage, ToolMessage } from "@langchain/core/messages";
 import { IChatSession } from "./types";
+import { ChatHFInference } from "./chat-hf";
+
+// Define an error interface for better type safety
+interface ErrorWithMessage {
+  message: string;
+}
+
+function isErrorWithMessage(error: unknown): error is ErrorWithMessage {
+  return (
+    typeof error === 'object' &&
+    error !== null &&
+    'message' in error &&
+    typeof (error as Record<string, unknown>).message === 'string'
+  );
+}
+
+function toErrorWithMessage(error: unknown): ErrorWithMessage {
+  if (isErrorWithMessage(error)) return error;
+  
+  try {
+    return new Error(String(error));
+  } catch {
+    // fallback in case there's an error stringifying the error
+    return new Error('Unknown error');
+  }
+}
+
+function getErrorMessage(error: unknown): string {
+  return toErrorWithMessage(error).message;
+}
 
 export class ChatManager {
   model!: BaseChatModel;
-  embeddings!: Embeddings;
-  controller!: AbortController;
-  configManager!: ConfigManager;
+  embeddings!: Embeddings | null;
+  controller: AbortController;
+  configManager: ConfigManager;
   config!: IConfig;
-  documentManager!: DocumentManager;
+  documentManager: DocumentManager;
+  private static instance: ChatManager | null = null;
 
   constructor() {
     this.controller = new AbortController();
-    this.initializeModels();
+    this.configManager = ConfigManager.getInstance();
     this.documentManager = DocumentManager.getInstance();
+    this.initializeConfig();
   }
 
-  private async initializeModels() {
-    this.configManager = await ConfigManager.getInstance();
+  public static getInstance(): ChatManager {
+    if (!ChatManager.instance) {
+      ChatManager.instance = new ChatManager();
+    }
+    return ChatManager.instance;
+  }
+
+  private async initializeConfig() {
     this.config = await this.configManager.getConfig();
   }
 
+  public resetController() {
+    this.controller = new AbortController();
+  }
+
   private async getChatModel(modelName: string): Promise<BaseChatModel> {
+    // Ensure config is loaded
+    if (!this.config) {
+      await this.initializeConfig();
+    }
+    
     const model = CHAT_MODELS.find(m => m.model === modelName);
 
     if (!model) {
       throw new Error(`Chat model ${modelName} not found`);
     }
 
-    switch (model.provider) {
-      case PROVIDERS.ollama:
-        return new ChatOllama({
-          baseUrl: this.config.ollama_base_url,
-          model: model.model,
-        });
+    try {
+      switch (model.provider) {
+        case PROVIDERS.ollama:
+          return new ChatOllama({
+            baseUrl: this.config.ollama_base_url,
+            model: model.model,
+          });
 
-      case PROVIDERS.openai:
-        return new ChatOpenAI({
-          modelName: model.model,
-          apiKey: this.config.openai_api_key,
-        });
+        case PROVIDERS.openai:
+          return new ChatOpenAI({
+            modelName: this.config.openai_model && this.config.openai_model.trim() !== '' ? this.config.openai_model : model.model,
+            apiKey: this.config.openai_api_key,
+            configuration: {
+              baseURL: this.config.openai_base_url && this.config.openai_base_url.trim() !== '' ? this.config.openai_base_url : undefined,
+            }
+          });
 
-      case PROVIDERS.anthropic:
-        return new ChatAnthropic({
-          modelName: model.model,
-          apiKey: this.config.anthropic_api_key,
-        });
+        case PROVIDERS.anthropic:
+          return new ChatAnthropic({
+            modelName: model.model,
+            apiKey: this.config.anthropic_api_key,
+          });
 
-      case PROVIDERS.gemini:
-        return new ChatGoogleGenerativeAI({
-          modelName: model.model,
-          apiKey: this.config.gemini_api_key,
-        });
+        case PROVIDERS.gemini:
+          return new ChatGoogleGenerativeAI({
+            modelName: model.model,
+            apiKey: this.config.gemini_api_key,
+          });
 
-      default:
-        throw new Error(`Provider ${model.provider} not implemented yet for chat models`);
+        case PROVIDERS.huggingface:
+          return ChatHFInference({
+            modelName: model.model,
+            apiKey: this.config.hf_token,
+          });
+
+        default:
+          throw new Error(`Provider ${model.provider} not implemented yet for chat models`);
+      }
+    } catch (error: unknown) {
+      console.error(`Error creating chat model ${modelName}:`, error);
+      throw new Error(`Failed to initialize chat model ${modelName}: ${getErrorMessage(error)}`);
     }
   }
 
   private async getEmbeddingModel(modelName: string): Promise<Embeddings> {
+    // Ensure config is loaded
+    if (!this.config) {
+      await this.initializeConfig();
+    }
+    
+    if (!modelName) {
+      throw new Error("No embedding model specified");
+    }
+    
     const model = EMBEDDING_MODELS.find(m => m.model === modelName);
 
     if (!model) {
       throw new Error(`Embedding model ${modelName} not found`);
     }
 
-    switch (model.provider) {
-      case PROVIDERS.ollama:
-        return new OllamaEmbeddings({
-          baseUrl: this.config.ollama_base_url,
-          model: model.model,
-        });
+    // Check if trying to use Ollama when it's not available
+    if (model.provider === PROVIDERS.ollama) {
+      // Check if Ollama base URL is not configured
+      if (!this.config.ollama_base_url || this.config.ollama_base_url.trim() === '') {
+        throw new Error(`Ollama base URL is not configured. Please set a valid URL in the settings.`);
+      }
+      
+      // Check if Ollama is not available
+      if (!this.config.ollama_available) {
+        throw new Error(`Ollama server is not available. Please check your connection to ${this.config.ollama_base_url}`);
+      }
+    }
 
-      case PROVIDERS.openai:
-        return new OpenAIEmbeddings({
-          modelName: model.model,
-          apiKey: this.config.openai_api_key,
-        });
+    try {
+      switch (model.provider) {
+        case PROVIDERS.ollama:
+          return new OllamaEmbeddings({
+            baseUrl: this.config.ollama_base_url,
+            model: model.model,
+          });
 
-      case PROVIDERS.gemini:
-        return new GoogleGenerativeAIEmbeddings({
-          modelName: model.model,
-          apiKey: this.config.gemini_api_key,
-        });
+        case PROVIDERS.openai:
+          return new OpenAIEmbeddings({
+            modelName: model.model,
+            apiKey: this.config.openai_api_key,
+          });
 
-      default:
-        throw new Error(`Provider ${model.provider} not implemented yet for embedding models`);
+        case PROVIDERS.gemini:
+          return new GoogleGenerativeAIEmbeddings({
+            modelName: model.model,
+            apiKey: this.config.gemini_api_key,
+          });
+
+        default:
+          throw new Error(`Provider ${model.provider} not implemented yet for embedding models`);
+      }
+    } catch (error: unknown) {
+      console.error(`Error creating embedding model ${modelName}:`, error);
+      throw new Error(`Failed to initialize embedding model ${modelName}: ${getErrorMessage(error)}`);
     }
   }
 
@@ -298,6 +386,14 @@ export class ChatManager {
         }
         
         return content;
+      },
+
+      [PROVIDERS.huggingface]: async () => {
+        // Hugging Face Inference API primarily supports text
+        return processedContent.docs.map(doc => ({
+          type: "text",
+          text: `File name: ${doc.metadata.name}\nFile content: ${doc.pageContent}`
+        }));
       }
     };
   
@@ -335,7 +431,7 @@ export class ChatManager {
     const chatSession = await memory.db.table("sessions").get(sessionId);
     
     this.model = await this.getChatModel(chatSession?.model || this.config.default_chat_model);
-    this.embeddings = await this.getEmbeddingModel(chatSession?.embedding_model || this.config.default_embedding_model);
+    this.embeddings = await this.getEmbeddingModel(chatSession?.embedding_model || this.config.default_embedding_model || null);
 
     const agent = await this.getAgent(chatSession?.enabled_tools || []);
 

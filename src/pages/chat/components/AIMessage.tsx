@@ -21,7 +21,7 @@ export const AIMessageComponent = React.memo(({ message }: MessageProps) => {
   }, [message.content]);
 
   return (
-    <div className="flex flex-col gap-4 group">
+    <div className="flex flex-col gap-1 group">
       <div className="prose prose-sm dark:prose-invert max-w-none">
         <ReactMarkdown
           remarkPlugins={[remarkMath, remarkGfm]}

@@ -23,9 +23,9 @@ export const ModelSelector = React.memo(({
     <DropdownMenuTrigger asChild>
       <Button 
         variant="ghost" 
-        className="w-[200px] h-8 p-1 justify-start font-normal"
+        className="w-[200px] h-8 p-1 justify-start font-normal truncate"
       >
-        {selectedModelName}
+        <span className="truncate">{selectedModelName}</span>
       </Button>
     </DropdownMenuTrigger>
     <DropdownMenuContent className="w-[400px]">

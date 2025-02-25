@@ -1,27 +1,30 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ChatManager } from "@/lib/chat/manager";
 import { useLiveQuery } from "dexie-react-hooks";
 import { mapStoredMessageToChatMessage } from "@langchain/core/messages";
-import { DexieChatMemory } from "@/lib/chat/memory";
 import { ConfigManager } from "@/lib/config/manager";
-import { DocumentManager } from "@/lib/document/manager";
 import { toast } from "sonner";
 import { Messages } from "./components/Messages";
 import { Input } from "./components/Input";
 import { FilePreviewDialog } from "./components/FilePreviewDialog";
-import { useChatSession, useSelectedModel, generateMessage } from "./hooks";
-import { CHAT_MODELS } from "@/lib/config/types";
+import { useChatSession, useSelectedModel, generateMessage, useChatManager } from "@/hooks/use-chat";
+import { CHAT_MODELS, PROVIDERS } from "@/lib/config/types";
 import { IDocument } from "@/lib/document/types";
 import { HumanMessage } from "@langchain/core/messages";
 import { AIMessageChunk } from "@langchain/core/messages";
+import { DocumentManager } from "@/lib/document/manager";
+import { useLoading } from "@/contexts/loading-context";
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
+import { AlertCircle } from "lucide-react";
 
 export function ChatPage() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { startLoading, stopLoading } = useLoading();
 
+  // Use singleton instances
   const configManager = React.useMemo(() => ConfigManager.getInstance(), []);
-  const chatManager = React.useMemo(() => new ChatManager(), []);
+  const chatManager = useChatManager();
   const documentManager = React.useMemo(() => DocumentManager.getInstance(), []);
 
   const [input, setInput] = React.useState("");
@@ -33,14 +36,29 @@ export function ChatPage() {
   const [streamingHumanMessage, setStreamingHumanMessage] = React.useState<HumanMessage | null>(null);
   const [streamingAIMessageChunks, setStreamingAIMessageChunks] = React.useState<AIMessageChunk[]>([]);
   const [editingMessageIndex, setEditingMessageIndex] = React.useState<number | null>(null);
+  const [error, setError] = React.useState<string | null>(null);
 
   const config = useLiveQuery(async () => await configManager.getConfig());
   const chatSession = useChatSession(id);
   const [selectedModel, setSelectedModel, chatHistoryDB] = useSelectedModel(id, config);
 
+  // Show loading screen during initial config load
+  useEffect(() => {
+    if (!config) {
+      startLoading("Loading configuration...");
+      return;
+    }
+    stopLoading();
+  }, [config, startLoading, stopLoading]);
+
   const selectedModelName = React.useMemo(() => (
     CHAT_MODELS.find(model => model.model === selectedModel)?.name || "Select a model"
   ), [selectedModel]);
+
+  const selectedModelProvider = React.useMemo(() => {
+    const model = CHAT_MODELS.find(model => model.model === selectedModel);
+    return model?.provider;
+  }, [selectedModel]);
 
   const handleModelChange = React.useCallback(async (model: string) => {
     if (!config) return;
@@ -61,29 +79,69 @@ export function ChatPage() {
       }
     }
     setSelectedModel(model);
+    setError(null); // Clear any previous errors when changing models
   }, [config, id, setSelectedModel, configManager, chatHistoryDB.sessions]);
 
   const handleSendMessage = React.useCallback(async () => {
+    // Clear any previous errors
+    setError(null);
+    
+    // Check if trying to use Ollama when it's not available or not configured
+    if (selectedModelProvider === PROVIDERS.ollama && config) {
+      if (!config.ollama_base_url || config.ollama_base_url.trim() === '') {
+        setError(`Ollama base URL is not configured. Please set a valid URL in the settings.`);
+        return;
+      }
+      
+      if (!config.ollama_available) {
+        setError(`Ollama server is not available. Please check your connection to ${config.ollama_base_url}`);
+        return;
+      }
+    }
+    
     let chatId = id;
     let isNewChat = false;
     if (id === "new") {
       chatId = crypto.randomUUID();
-      new DexieChatMemory(chatId);
       isNewChat = true;
       navigate(`/chat/${chatId}`, { replace: true });
     }
-    await generateMessage(chatId, input, attachments, isGenerating, setIsGenerating, setStreamingHumanMessage, setStreamingAIMessageChunks, chatManager, setInput, setAttachments);
-
-    if (isNewChat && chatId) {
-      const chatName = await chatManager.chatChain(
-        `Based on this user message, generate a very concise (max 40 chars) but descriptive name for this chat: "${input}"`,
-        "You are a helpful assistant that generates concise chat names. Respond only with the name, no quotes or explanation."
+    
+    // Reset controller before starting a new chat
+    chatManager.resetController();
+    
+    try {
+      await generateMessage(
+        chatId, 
+        input, 
+        attachments, 
+        isGenerating, 
+        setIsGenerating, 
+        setStreamingHumanMessage, 
+        setStreamingAIMessageChunks, 
+        chatManager, 
+        setInput, 
+        setAttachments
       );
-      await chatHistoryDB.sessions.update(chatId, {
-        name: String(chatName.content)
-      });
+
+      if (isNewChat && chatId) {
+        const chatName = await chatManager.chatChain(
+          `Based on this user message, generate a very concise (max 40 chars) but descriptive name for this chat: "${input}"`,
+          "You are a helpful assistant that generates concise chat names. Respond only with the name, no quotes or explanation."
+        );
+        await chatHistoryDB.sessions.update(chatId, {
+          name: String(chatName.content)
+        });
+      }
+    } catch (error) {
+      console.error("Error sending message:", error);
+      if (error instanceof Error) {
+        setError(error.message);
+      } else {
+        setError("An unknown error occurred while sending your message");
+      }
     }
-  }, [id, input, attachments, isGenerating, chatManager, navigate, chatHistoryDB.sessions]);
+  }, [id, input, attachments, isGenerating, chatManager, navigate, chatHistoryDB.sessions, selectedModelProvider, config]);
   
   const handleAttachmentFileUpload = React.useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
@@ -128,59 +186,144 @@ export function ChatPage() {
   const handleSaveEdit = React.useCallback(async (content: string) => {
     if (!id || editingMessageIndex === null || !chatSession || isGenerating) return;
 
-    // Update the message directly in the database
-    const updatedMessages = [...chatSession.messages];
-    updatedMessages[editingMessageIndex] = {
-      ...updatedMessages[editingMessageIndex],
-      data: {
-        ...updatedMessages[editingMessageIndex].data,
-        content
+    // Clear any previous errors
+    setError(null);
+    
+    // Check if trying to use Ollama when it's not available or not configured
+    if (selectedModelProvider === PROVIDERS.ollama && config) {
+      if (!config.ollama_base_url || config.ollama_base_url.trim() === '') {
+        setError(`Ollama base URL is not configured. Please set a valid URL in the settings.`);
+        return;
       }
-    };
-    // Remove messages after the edited message
-    const newMessages = updatedMessages.slice(0, editingMessageIndex);
-    
-    await chatHistoryDB.sessions.update(id, {
-      ...chatSession,
-      messages: newMessages,
-      updatedAt: Date.now()
-    });
-    
-    setInput(content);
-    setEditingMessageIndex(null);
-    setAttachments([]);
+      
+      if (!config.ollama_available) {
+        setError(`Ollama server is not available. Please check your connection to ${config.ollama_base_url}`);
+        return;
+      }
+    }
 
-    generateMessage(id, content, [], isGenerating, setIsGenerating, setStreamingHumanMessage, setStreamingAIMessageChunks, chatManager, setInput, setAttachments);
-  }, [id, editingMessageIndex, chatSession, isGenerating, chatHistoryDB.sessions, chatManager]);
+    try {
+      // Update the message directly in the database
+      const updatedMessages = [...chatSession.messages];
+      updatedMessages[editingMessageIndex] = {
+        ...updatedMessages[editingMessageIndex],
+        data: {
+          ...updatedMessages[editingMessageIndex].data,
+          content
+        }
+      };
+      // Remove messages after the edited message
+      const newMessages = updatedMessages.slice(0, editingMessageIndex + 1);
+      
+      await chatHistoryDB.sessions.update(id, {
+        ...chatSession,
+        messages: newMessages,
+        updatedAt: Date.now()
+      });
+      
+      setInput(content);
+      setEditingMessageIndex(null);
+      setAttachments([]);
+
+      // Reset controller before regenerating
+      chatManager.resetController();
+      
+      await generateMessage(
+        id, 
+        content, 
+        [], 
+        isGenerating, 
+        setIsGenerating, 
+        setStreamingHumanMessage, 
+        setStreamingAIMessageChunks, 
+        chatManager, 
+        setInput, 
+        setAttachments
+      );
+    } catch (error) {
+      console.error("Error editing message:", error);
+      if (error instanceof Error) {
+        setError(error.message);
+      } else {
+        setError("An unknown error occurred while editing your message");
+      }
+    }
+  }, [id, editingMessageIndex, chatSession, isGenerating, chatHistoryDB.sessions, chatManager, selectedModelProvider, config]);
 
   const handleRegenerateMessage = React.useCallback(async (index: number) => {
     if (!id || !chatSession || isGenerating) return;
 
-    const messages = chatSession.messages;
-    if (messages.length <= index) return;
+    // Clear any previous errors
+    setError(null);
     
-    const message = messages[index];
-    const content = message.data.content;
+    // Check if trying to use Ollama when it's not available or not configured
+    if (selectedModelProvider === PROVIDERS.ollama && config) {
+      if (!config.ollama_base_url || config.ollama_base_url.trim() === '') {
+        setError(`Ollama base URL is not configured. Please set a valid URL in the settings.`);
+        return;
+      }
+      
+      if (!config.ollama_available) {
+        setError(`Ollama server is not available. Please check your connection to ${config.ollama_base_url}`);
+        return;
+      }
+    }
 
-    // Remove messages after the current message
-    const newMessages = messages.slice(0, index);
-    
-    await chatHistoryDB.sessions.update(id, {
-      ...chatSession,
-      messages: newMessages,
-      updatedAt: Date.now()
-    });
-    
-    generateMessage(id, content, [], isGenerating, setIsGenerating, setStreamingHumanMessage, setStreamingAIMessageChunks, chatManager, setInput, setAttachments);
-  }, [id, chatSession, isGenerating, chatHistoryDB.sessions, chatManager]);
+    try {
+      const messages = chatSession.messages;
+      if (messages.length <= index) return;
+      
+      const message = messages[index];
+      const content = message.data.content;
+
+      // Remove messages after the current message
+      const newMessages = messages.slice(0, index + 1);
+      
+      await chatHistoryDB.sessions.update(id, {
+        ...chatSession,
+        messages: newMessages,
+        updatedAt: Date.now()
+      });
+      
+      // Reset controller before regenerating
+      chatManager.resetController();
+      
+      await generateMessage(
+        id, 
+        content, 
+        [], 
+        isGenerating, 
+        setIsGenerating, 
+        setStreamingHumanMessage, 
+        setStreamingAIMessageChunks, 
+        chatManager, 
+        setInput, 
+        setAttachments
+      );
+    } catch (error) {
+      console.error("Error regenerating message:", error);
+      if (error instanceof Error) {
+        setError(error.message);
+      } else {
+        setError("An unknown error occurred while regenerating the message");
+      }
+    }
+  }, [id, chatSession, isGenerating, chatHistoryDB.sessions, chatManager, selectedModelProvider, config]);
 
   const stopGenerating = React.useCallback(() => {
     chatManager.controller.abort();
     setIsGenerating(false);
-  }, [chatManager, setIsGenerating]);
+  }, [chatManager]);
 
   return (
     <div className="flex flex-col h-screen p-2">
+      {error && (
+        <Alert variant="destructive" className="mb-4">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Error</AlertTitle>
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
       <Messages
         messages={chatSession?.messages.map(mapStoredMessageToChatMessage)}
         streamingHumanMessage={streamingHumanMessage}

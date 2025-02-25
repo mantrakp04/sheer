@@ -84,3 +84,94 @@ react-vite-ui/
 ## 📄 License
 
 This project is licensed under the MIT License. See the [LICENSE](https://choosealicense.com/licenses/mit/) file for details.
+
+# AI Platform with Integrations
+
+This platform allows you to configure and use various AI providers and models, with integrations for Hugging Face and Google Drive.
+
+## Setting Up Integrations
+
+### Hugging Face Integration
+
+To set up the Hugging Face integration:
+
+1. Go to [Hugging Face](https://huggingface.co/) and create an account if you don't have one.
+2. Navigate to your profile settings and go to "Access Tokens".
+3. Create a new OAuth application:
+   - Name: Your App Name
+   - Redirect URI: `https://your-domain.com/integrations/huggingface-callback`
+   - Scopes: `inference-api`
+4. Copy the Client ID and Client Secret.
+5. Update the environment variables in your application:
+   ```
+   OAUTH_CLIENT_ID=your_client_id
+   OAUTH_CLIENT_SECRET=your_client_secret
+   ```
+
+### Google Drive Integration
+
+To set up the Google Drive integration:
+
+1. Go to the [Google Cloud Console](https://console.cloud.google.com/).
+2. Create a new project or select an existing one.
+3. Navigate to "APIs & Services" > "Credentials".
+4. Click "Create Credentials" > "OAuth client ID".
+5. Configure the OAuth consent screen:
+   - User Type: External
+   - App name: Your App Name
+   - User support email: Your email
+   - Developer contact information: Your email
+6. Add the following scopes:
+   - `https://www.googleapis.com/auth/drive.file`
+7. Create the OAuth client ID:
+   - Application type: Web application
+   - Name: Your App Name
+   - Authorized JavaScript origins: `https://your-domain.com`
+   - Authorized redirect URIs: `https://your-domain.com/integrations/google-callback`
+8. Copy the Client ID and Client Secret.
+9. Update the environment variables in your application:
+   ```
+   GOOGLE_CLIENT_ID=your_client_id
+   GOOGLE_CLIENT_SECRET=your_client_secret
+   ```
+
+## Using the Integrations
+
+### Hugging Face
+
+Once authenticated, you can use the Hugging Face Inference API to access models hosted on Hugging Face. The integration provides the following functionality:
+
+- Call the Inference API with any model
+- Access to all public and your private models
+
+### Google Drive
+
+Once authenticated, you can use the Google Drive API to read and write files. The integration provides the following functionality:
+
+- List files in your Google Drive
+- Upload files to your Google Drive
+- Download files from your Google Drive
+
+## Development
+
+To run the application locally:
+
+1. Clone the repository
+2. Install dependencies: `npm install`
+3. Start the development server: `npm run dev`
+4. Open [http://localhost:3000](http://localhost:3000) in your browser
+
+## Environment Variables
+
+Create a `.env` file in the root directory with the following variables:
+
+```
+OAUTH_CLIENT_ID=your_huggingface_client_id
+OAUTH_CLIENT_SECRET=your_huggingface_client_secret
+GOOGLE_CLIENT_ID=your_google_client_id
+GOOGLE_CLIENT_SECRET=your_google_client_secret
+```
+
+## License
+
+MIT

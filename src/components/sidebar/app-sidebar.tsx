@@ -18,13 +18,14 @@ import { useLiveQuery } from "dexie-react-hooks";
 import { ChatHistoryDB } from "@/lib/chat/memory";
 import { useState } from "react";
 import { toast } from "sonner";
+import { IChatSession } from "@/lib/chat/types";
 
 export function AppSidebar() {
   const location = useLocation();
   const navigate = useNavigate();
   const chats = useLiveQuery(async () => {
-    const sessions = await new ChatHistoryDB().sessions.toArray();
-    return sessions.sort((a, b) => b.updatedAt - a.updatedAt);
+    const sessions = await ChatHistoryDB.getInstance().sessions.toArray();
+    return sessions.sort((a: IChatSession, b: IChatSession) => b.updatedAt - a.updatedAt);
   });
   const [hoveringId, setHoveringId] = useState<string | null>(null);
 
@@ -63,7 +64,7 @@ export function AppSidebar() {
           <SidebarGroupLabel>Chats</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {chats?.map((chat) => (
+              {chats?.map((chat: IChatSession) => (
                 <SidebarMenuItem key={chat.id}>
                     <SidebarMenuButton
                       asChild
@@ -85,7 +86,7 @@ export function AppSidebar() {
                           }`}
                           onClick={(e) => {
                             e.preventDefault();
-                            new ChatHistoryDB().sessions.delete(chat.id);
+                            ChatHistoryDB.getInstance().sessions.delete(chat.id);
                             toast.success("Chat deleted");
                             return navigate("/chat/new");
                           }}
