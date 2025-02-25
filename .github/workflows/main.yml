@@ -74,12 +74,20 @@ jobs:
           See LICENSE file for details.
           EOL
       
+      - name: Prepare for Hugging Face
+        run: |
+          # Create a .gitignore specifically for the HF Space
+          echo "node_modules/" > .hugginface.gitignore
+          # Move the dist content to a directory that's not ignored
+          mkdir -p static
+          cp -r dist/* static/
+      
       - name: Push to Hugging Face Hub
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: |
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           git config --global user.name "GitHub Actions"
-          git add README.md dist/
+          git add README.md static/
           git commit -m "Update build and README for Hugging Face Space"
           git push https://mantrakp:$HF_TOKEN@huggingface.co/spaces/mantrakp/sheer main:main
