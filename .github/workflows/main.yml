@@ -7,25 +7,15 @@ on:
   workflow_dispatch:
 
 jobs:
-  build-and-sync-to-hub:
+  sync-to-hub:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
+      - name: Checkout gh-pages branch
         uses: actions/checkout@v3
         with:
+          ref: gh-pages
           fetch-depth: 0
           lfs: true
-      
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v1
-        with:
-          bun-version: latest
-      
-      - name: Install dependencies
-        run: bun install
-      
-      - name: Build app
-        run: bun run build
       
       - name: Update README for Hugging Face Space
         run: |
@@ -67,20 +57,12 @@ jobs:
           
           ## Development
           
-          This Space is automatically updated via GitHub Actions from the repository. Any changes pushed to the main branch are automatically built and deployed to this Space.
+          This Space is automatically updated via GitHub Actions from the repository. The gh-pages branch is directly pushed to this Space.
           
           ## License
           
           See LICENSE file for details.
           EOL
-      
-      - name: Prepare for Hugging Face
-        run: |
-          # Create a .gitignore specifically for the HF Space
-          echo "node_modules/" > .hugginface.gitignore
-          # Move the dist content to a directory that's not ignored
-          mkdir -p static
-          cp -r dist/* static/
       
       - name: Push to Hugging Face Hub
         env:
@@ -88,6 +70,6 @@ jobs:
         run: |
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           git config --global user.name "GitHub Actions"
-          git add README.md static/
-          git commit -m "Update build and README for Hugging Face Space"
+          git add README.md
+          git commit -m "Update README for Hugging Face Space"
           git push https://mantrakp:$HF_TOKEN@huggingface.co/spaces/mantrakp/sheer main:main
