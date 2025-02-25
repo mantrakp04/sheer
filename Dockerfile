@@ -12,14 +12,16 @@ RUN apt-get update && apt-get install -y \
     unzip \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Bun
-RUN curl -fsSL https://bun.sh/install | bash
+# Create and set working directory
+WORKDIR /app
+
+# Install Bun (following the official method)
+RUN curl -fsSL https://bun.sh/install | bash \
+    && chmod +x /root/.bun/bin/bun \
+    && ln -s /root/.bun/bin/bun /usr/local/bin/bun
 
 # Add Bun to PATH
 ENV PATH="/root/.bun/bin:$PATH"
-
-# Create and set working directory
-WORKDIR /app
 
 # Copy package.json and package-lock.json
 COPY package.json ./
@@ -38,4 +40,4 @@ RUN bun run build
 EXPOSE 7860
 
 # Command to run the application
-CMD bun run preview
+CMD ["bun", "run", "preview"]
